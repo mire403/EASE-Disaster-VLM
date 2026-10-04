@@ -1,170 +1,119 @@
 # EASE: Evidence-to-Answer Supervision for Disaster-Scene Vision-Language Adaptation
 
-[![ACML 2026](https://img.shields.io/badge/ACML-2026-4b6cb7)](#citation) [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776ab?logo=python&logoColor=white)](#installation) [![Task](https://img.shields.io/badge/Task-disaster--scene%20VQA-00897b)](#overview) [![Backbones](https://img.shields.io/badge/Backbones-Qwen%20%7C%20GLM-6f42c1)](#four-cell-workflow) [![QLoRA](https://img.shields.io/badge/Adaptation-4--bit%20QLoRA-orange)](#method)
+[![ACML 2026](https://img.shields.io/badge/ACML-2026-4b6cb7)](#citation) [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776ab?logo=python&logoColor=white)](#quick-start) [![Task](https://img.shields.io/badge/Task-disaster--scene%20VQA-00897b)](#overview) [![Backbones](https://img.shields.io/badge/Backbones-Qwen%20%7C%20GLM-6f42c1)](#experiments) [![QLoRA](https://img.shields.io/badge/Adaptation-4--bit%20QLoRA-orange)](#method)
 
-Research code for **EASE**, by **Haoze Zheng** and **Yaping Han**, accepted to **ACML 2026**. The repository provides FloodNet data construction, mask-grounded evidence traces, four supervision combinations, Qwen/GLM adaptation, evaluation, and result analysis.
+Research code for **EASE**, by **Haoze Zheng** and **Yaping Han**, accepted to **ACML 2026**.
 
-**Core finding:** aligning loss with the assistant answer span produces a larger and more stable improvement than changing direct answers to trace-derived targets. Across three Qwen seeds, the paper reports an AA-versus-PC accuracy gap of **23.58 ± 0.34 percentage points**.
-
-## Contents
-
-- [Overview](#overview)
-- [Method](#method)
-- [Repository structure](#repository-structure)
-- [Installation](#installation)
-- [Dataset preparation](#dataset-preparation)
-- [Experiment code](#experiment-code)
-- [Four-cell workflow](#four-cell-workflow)
-- [Results and analysis](#results-and-analysis)
-- [Citation](#citation)
-- [Authors](#authors)
-- [Acknowledgments](#acknowledgments)
+[Overview](#overview) · [Method](#method) · [Structure](#repository-structure) · [Quick start](#quick-start) · [Experiments](#experiments) · [Results](#results) · [Citation](#citation) · [Authors and acknowledgments](#authors-and-acknowledgments)
 
 ## Overview
 
-Disaster-scene visual question answering requires concise, verifiable answers about aerial imagery. Semantic segmentation masks provide pixel-level evidence for constructing these questions, while the VLM must answer from the image at inference time. EASE studies the **evidence-to-answer alignment gap** that arises when prompts, evidence text, and answer labels are optimized together as a language-modeling sequence.
+EASE studies disaster-scene visual question answering using FloodNet aerial images and semantic masks. It separates **loss support** (full-sequence PC versus answer-aligned AA) from **target construction** (verified direct answers versus trace-derived answers). Models receive only the image, question, and answer choices at inference time.
 
-The study separates two supervision axes: **loss support**, either prompt-conditioned/full-sequence (PC) or assistant-answer-aligned (AA); and **target construction**, either verified direct answers (Ans) or trace-derived answers (Trace). The experiments cover Qwen3.5-9B and GLM-4.6V-Flash on six mask-verifiable question families.
+The main finding is that answer-aligned loss improves accuracy more consistently than changing answer targets to trace-derived targets. The paper reports a **23.58 ± 0.34 percentage-point** AA-versus-PC gap across three Qwen runs.
 
 ## Method
 
-1. Pair FloodNet images and semantic masks, then construct sequence-aware splits.
-2. Extract mask evidence and generate six families of verified visual questions.
-3. Execute evidence programs and construct direct or trace-derived answer targets.
-4. Train the four supervision cells with shared data, example order, seeds, and adaptation settings.
-5. Evaluate held-out questions and analyze prediction changes by family and case.
-
-| Cell | Optimized token positions | Target construction |
+| Cell | Optimized tokens | Training target |
 |---|---|---|
-| **PC-Ans** | Full non-padding sequence | Verified direct answer |
-| **PC-Trace** | Full non-padding sequence | Trace-derived answer with evidence context |
-| **AA-Ans** | Assistant answer span | Verified direct answer |
-| **AA-Trace** | Assistant answer span | Trace-derived answer with masked evidence context |
+| PC-Ans | All non-padding tokens | Verified direct answer |
+| PC-Trace | All non-padding tokens | Evidence and trace-derived answer |
+| AA-Ans | Final answer tokens | Verified direct answer |
+| AA-Trace | Final answer tokens | Evidence and trace-derived answer; evidence is masked from loss |
 
-Trace evidence and candidate support form the assistant-side training target. PC includes these evidence tokens in the loss; AA masks them and supervises only the final answer tokens. Evaluation prompts contain the image, question, and answer choices. The two target variants in the target builder are `task_only` and `multi_trace_soft_answer`.
+Image–mask pairs are split by sequence, converted into six question families, and checked with mask-grounded evidence programs. The four cells share training examples, order, and adaptation settings.
 
-![Figure 1: EASE overview and supervision design](figure/figure1.png)
-
-*Figure 1. EASE overview and the 2 × 2 supervision space.*
+![Figure 1: EASE overview and supervision design](figure/Figure1.png)
 
 ## Repository structure
 
 ```text
 EASE_ACML2026_code/
-├── README.md
-├── CITATION.cff
-├── pyproject.toml
-├── figure/                       # Figure1.png ... Figure5.png
-├── configs/data/                 # FloodNet construction settings
+├── README.md                      # project instructions and paper citation
+├── CITATION.cff                   # GitHub citation metadata
+├── pyproject.toml                 # installation and dependencies
+├── configs/data/floodnet_v1.yaml   # dataset paths and construction parameters
 ├── src/floodnet_rcmtd/
-│   ├── data/                     # pairs, splits, evidence, questions, audits
-│   ├── traces/                   # evidence programs and trace schema
-│   ├── distillation/             # direct and trace-derived targets
-│   ├── ease2026/                 # training, evaluation, summaries, diagnostics
-│   ├── cli.py                    # data-construction commands
-│   ├── config.py
-│   └── manifest.py
-├── scripts/
-│   ├── run_experiments.sh        # Qwen/GLM experiment grids
-│   └── plot_results.py           # CSV-based result plots
-├── results/                      # paper aggregate tables and case examples
-├── tests/                        # data, trace, protocol, and analysis tests
-└── docs/                         # experiment instructions and module guide
+│   ├── data/                      # image/mask pairs, splits, questions, audits
+│   ├── traces/                    # mask-grounded evidence programs
+│   ├── distillation/              # direct and trace-derived targets
+│   └── ease2026/                  # training, evaluation, metrics, diagnostics
+├── scripts/plot_results.py        # result plots
+├── results/                       # 12 paper result tables (CSV)
+├── figure/                        # Figure1.png ... Figure5.png
+└── tests/                         # data, evidence, training protocol, analysis
 ```
 
-See the [code inventory](docs/CODE_INVENTORY.md) and [experiment-to-result index](results/index.json) for a detailed map.
+The archive contains data-processing code and dataset statistics. Download FloodNet separately to the Linux data directory. The five paper images are included at `figure/Figure1.png` through `figure/Figure5.png`.
 
-## Installation
+## Quick start
 
-Use **Python 3.11 or 3.12**. Model training and inference require a **CUDA Linux GPU** and local model weights.
+Use Python **3.11 or 3.12**. Training and model evaluation require a **CUDA Linux GPU** and local model weights. Keep large datasets, weights, and checkpoints on Windows/Linux; Mac handles code, control, and analysis.
 
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
 python -m pip install -e '.[ease2026,analysis,dev]'
 pytest -q
 ```
 
-For code inspection, data utilities, and lightweight tests, install `.[analysis,dev]`. Large datasets, model weights, and checkpoints stay on the Windows relay or Linux server. See [hardware workflow and environment setup](docs/EXPERIMENTS.md#hardware-workflow).
-
-## Dataset preparation
-
-The benchmark uses **FloodNet-Supervised v1.0**. The paper reports **2,343 image–mask pairs** and a balanced held-out evaluation set of **480 questions**, with **80 questions per family**. See [dataset_statistics.csv](results/dataset_statistics.csv) for the reported dataset and split checks.
-
-| Family | Mask-derived evidence |
-|---|---|
-| Object presence | Class pixel count |
-| Damage state | Flooded building or road presence |
-| Area comparison | Flooded versus non-flooded road area |
-| Spatial adjacency | Region proximity under the adjacency radius |
-| Dominant class | Class with the greatest pixel coverage |
-| Logical conjunction | Presence and adjacency conditions |
-
-![Figure 2: FloodNet-derived dataset construction](figure/figure2.png)
-
-*Figure 2. Image–mask evidence is converted into questions with constrained answer spaces.*
-
-Obtain FloodNet under the dataset provider's terms and edit `data_root` and `output_root` in [configs/data/floodnet_v1.yaml](configs/data/floodnet_v1.yaml) for the Linux server.
+Edit `data_root` and `output_root` in [configs/data/floodnet_v1.yaml](configs/data/floodnet_v1.yaml), then prepare the data:
 
 ```bash
 floodnet-rcmtd build-split --config configs/data/floodnet_v1.yaml
 floodnet-rcmtd build-questions --config configs/data/floodnet_v1.yaml
 floodnet-rcmtd audit-questions --config configs/data/floodnet_v1.yaml
-
 ease2026 prepare --manifest /data/ease/derived/manifest.json --output /data/ease/vqa
 ease2026 audit --data-dir /data/ease/vqa
 ```
 
-Preparation writes separate train/test JSONL files and SHA256 records. Audits reject question, image, mask, or sequence-group overlap across splits and verify trace/gold agreement. Input schemas are documented in the [experiment guide](docs/EXPERIMENTS.md#data-preparation).
+Preparation exports train/test JSONL records and checks that questions, images, masks, and sequence groups do not overlap across splits. The paper reports **2,343 image–mask pairs** and **480 test questions**, with **80 per family**: object presence, damage state, area comparison, spatial adjacency, dominant class, and logical conjunction.
 
-## Experiment code
+![Figure 2: FloodNet-derived dataset construction](figure/Figure2.png)
 
-| Stage | Implementation | Role |
-|---|---|---|
-| Data construction | `data/layout.py`, `data/sequences.py`, `data/split.py` | Pair images/masks and assign sequence groups |
-| Grounded questions | `data/questions.py`, `data/audit.py` | Extract evidence, generate questions, verify labels |
-| Trace targets | `traces/programs.py`, `distillation/targets.py` | Execute evidence programs and aggregate candidate support |
-| Dataset export | `ease2026/prepare.py` | Export split-specific records, mask hashes, and area evidence |
-| Loss support | `ease2026/protocol.py` | Apply PC/AA token labels and shared cell order |
-| QLoRA and evaluation | `ease2026/runner.py` | Train adapters; run generation and candidate scoring |
-| Answer normalization | `ease2026/normalization.py` | Map generated text to an allowed answer label |
-| Metrics and seed analysis | `ease2026/summary.py` | Aggregate metrics, family results, entropy, and AA/PC gaps |
-| Case diagnostics | `ease2026/diagnostics.py` | Export confusion matrices, help/hurt cases, and area/support margins |
+## Experiments
 
-## Four-cell workflow
+| Code | Purpose |
+|---|---|
+| `data/`, `traces/`, `distillation/` | Dataset construction and verified answer targets |
+| `ease2026/prepare.py` | Export training/evaluation records and validate splits |
+| `ease2026/protocol.py` | PC/AA token supervision |
+| `ease2026/runner.py` | Qwen/GLM QLoRA training and evaluation |
+| `ease2026/normalization.py` | Constrain generated answers to valid labels |
+| `ease2026/summary.py`, `diagnostics.py` | Metrics, confusion matrices, and paired cases |
 
-The default adaptation settings are 4-bit NF4 QLoRA, LoRA rank **16**, alpha **32**, dropout **0.05**, learning rate **1e-4**, **480 optimizer updates**, and **16 accumulation microsteps**. Images are capped at **262,144 pixels** and thinking mode is disabled. All four cells use the same seed and ordered training examples within a run grid.
-
-Run complete grids on Linux:
-
-```bash
-bash scripts/run_experiments.sh qwen /data/ease/vqa /data/models/Qwen3.5-9B /data/ease/runs
-bash scripts/run_experiments.sh glm /data/ease/vqa /data/models/GLM-4.6V-Flash /data/ease/runs
-```
-
-The Qwen grid defaults to seeds `20260618 20260619 20260620`; the GLM grid uses one seed. Both grids include zero-shot evaluation, PC-Ans, PC-Trace, AA-Ans, AA-Trace, two decoding modes, metric aggregation, and paired diagnostics. Trailing seed arguments override the defaults.
-
-For an individual experiment:
+Defaults: NF4 QLoRA, rank **16**, alpha **32**, dropout **0.05**, learning rate **1e-4**, **480** optimizer updates, **16** accumulation microsteps, image area capped at **262,144** pixels, and thinking disabled.
 
 ```bash
 ease2026 train --data-dir /data/ease/vqa --output-root /data/ease/runs \
-  --backbone qwen --model-path /data/models/Qwen3.5-9B --seed 20260618 --cell AA-Ans
+  --backbone qwen --model-path /data/models/Qwen3.5-9B --seed 1 --cell AA-Ans
 
 ease2026 evaluate --data-dir /data/ease/vqa --output-root /data/ease/runs \
-  --backbone qwen --model-path /data/models/Qwen3.5-9B --seed 20260618 \
+  --backbone qwen --model-path /data/models/Qwen3.5-9B --seed 1 \
   --cell AA-Ans --mode candidate
+
+ease2026 summarize --output-root /data/ease/runs --backbone qwen \
+  --seeds 1 --cells AA-Ans --mode candidate --output /data/ease/summary.json
+
+ease2026 analyze --output-root /data/ease/runs --backbone qwen \
+  --seed 1 --mode generation --data-dir /data/ease/vqa --output /data/ease/diagnostics
+
+python scripts/plot_results.py --results-dir results --output plots
 ```
 
-Use `--mode generation` for greedy short-answer decoding. Candidate scoring records answer probabilities for ECE; generation mode stores confidence as `null`. Training saves adapters, loss records, data hashes, and package versions. Evaluation saves raw text or candidate scores with every prediction.
+Choose `PC-Ans`, `PC-Trace`, `AA-Ans`, or `AA-Trace` for training, and `Zero-shot` for baseline evaluation. For GLM, use `--backbone glm` with its local model path. `--mode generation` enables greedy decoding; candidate scoring records probabilities for ECE. Generation confidence is `null`.
 
-## Results and analysis
+The seed argument controls randomness for an individual run; the example value above is illustrative. Use the same value across compared cells. `analyze` requires generation outputs for Zero-shot and all four adapted cells. Use `ease2026 <command> --help` for all options.
 
-The [results directory](results/README.md) contains machine-readable **paper-reported aggregate results** and representative cases. New run outputs are saved under the selected output root.
+Outputs are written under `runs/<backbone>/seed<seed>/<cell>/`: adapter weights, processor, run metadata, training loss, and evaluation predictions. Metric summaries and paired diagnostics are written to the requested output paths.
 
-**Three-seed Qwen3.5-9B comparison.** Values are percentages; adapted entries are mean ± standard deviation.
+## Results
 
-| Method | Accuracy (%) | Macro-F1 (%) | Reported ECE (%) |
+The 12 CSV files contain **paper-reported aggregate results** and representative cases. New experiment outputs are stored separately in the chosen output directory.
+
+**Qwen3.5-9B, three-run mean ± standard deviation (%):**
+
+| Method | Accuracy | Macro-F1 | Reported ECE |
 |---|---:|---:|---:|
 | Zero-shot | 70.42 | 51.09 | 29.58 |
 | PC-Ans | 69.10 ± 0.43 | 32.28 ± 0.62 | 31.17 ± 0.43 |
@@ -172,59 +121,29 @@ The [results directory](results/README.md) contains machine-readable **paper-rep
 | AA-Ans | **93.54 ± 0.63** | **69.90 ± 4.22** | **6.46 ± 0.63** |
 | AA-Trace | 92.85 ± 0.43 | 67.17 ± 1.72 | 7.12 ± 0.36 |
 
-The paired AA-versus-PC gaps are **23.96, 23.44, and 23.33 percentage points**, averaging **23.58 ± 0.34**. The direct-versus-trace difference is smaller and seed-sensitive. CSV: [qwen_three_seed.csv](results/qwen_three_seed.csv).
+The primary Qwen run reaches **94.17%** for AA-Ans and **92.71%** for AA-Trace with generation. GLM reaches **90.21%** and **89.79%**, respectively; its average AA-versus-PC gap is **21.56 percentage points**.
 
-![Figure 3: Primary-seed accuracy, macro-F1, and ECE](figure/figure3.png)
+![Figure 3: Primary-seed accuracy, macro-F1, and ECE](figure/Figure3.png)
 
-*Figure 3. Primary-seed metric profile. The table above summarizes three seeds; the figure shows the primary run.*
+AA-Ans improves spatial adjacency from **31.25% to 98.75%**, conjunction from **60.00% to 96.25%**, and area comparison from **67.50% to 93.75%**. Dominant-class errors are associated with small differences between the two largest regions.
 
-The primary run reaches **94.17%** for AA-Ans and **92.71%** for AA-Trace under generation. Candidate scoring reaches **92.92%** and **92.29%**, respectively. The full decoding comparison is in [qwen_primary_seed.csv](results/qwen_primary_seed.csv).
+![Figure 4: Accuracy by reasoning family](figure/Figure4.png)
 
-**GLM-4.6V-Flash comparison.** The same loss-support pattern appears on the second backbone.
+AA-Ans fixes **123** zero-shot errors. AA-Trace helps **9** AA-Ans cases and hurts **16**; **19** cases remain hard. These are separate diagnostic counts.
 
-| Method | Accuracy (%) | Macro-F1 (%) | Reported ECE (%) |
-|---|---:|---:|---:|
-| Zero-shot | 68.54 | 49.63 | 30.36 |
-| PC-Ans | 67.71 | 34.08 | 31.14 |
-| PC-Trace | 69.17 | 35.11 | 29.71 |
-| AA-Ans | **90.21** | 67.58 | 7.82 |
-| AA-Trace | 89.79 | **68.02** | **7.55** |
+![Figure 5: Case-level diagnostics](figure/Figure5.png)
 
-The average AA accuracy exceeds the average PC accuracy by **21.56 percentage points**. CSV: [glm_single_seed.csv](results/glm_single_seed.csv).
-
-**Reasoning families and prediction behavior.** On the primary Qwen run, AA-Ans improves spatial adjacency from **31.25% to 98.75%**, logical conjunction from **60.00% to 96.25%**, and area comparison from **67.50% to 93.75%**. PC predictions are more concentrated: normalized entropy falls from **0.74** for zero-shot to **0.43** for PC-Ans and **0.47** for PC-Trace.
-
-![Figure 4: Accuracy by reasoning family](figure/figure4.png)
-
-*Figure 4. Primary-seed accuracy across six reasoning families.*
-
-Dominant-class questions remain difficult when the two largest semantic regions have similar areas. The paper reports a median area margin of **0.058** for errors and **0.184** for correct cases; **8 of 11** errors have margins below **0.10**. See [family accuracy](results/question_family_accuracy.csv), [prediction behavior](results/prediction_behavior.csv), and [dominant-class diagnostics](results/dominant_class_diagnostics.csv).
-
-**Trace support and case diagnostics.** Trace top-1 answers agree with verified labels on all **480** training examples; the reported median gold-label support is **0.92**. AA-Ans fixes **123** zero-shot errors. AA-Trace helps **9** AA-Ans cases and hurts **16**; **19** cases remain hard, and the two primary AA-Ans seeds disagree on **30** examples. These are separate diagnostics, rather than a partition of the evaluation set.
-
-![Figure 5: Case-level diagnostics](figure/figure5.png)
-
-*Figure 5. Primary-run prediction changes and seed disagreements.*
-
-Nine trace regressions involve dominant-class or area-comparison questions, and seven of those have area margins below 0.10. See [case counts](results/case_diagnostics.csv), [trace support](results/trace_support_diagnostics.csv), [trace regressions](results/trace_regression_diagnostics.csv), and [representative cases](results/qualitative_cases.csv).
-
-Compute summaries and paired diagnostics from saved predictions:
-
-```bash
-ease2026 summarize --output-root /data/ease/runs --backbone qwen \
-  --seeds 20260618 20260619 20260620 --mode candidate \
-  --output /data/ease/runs/qwen_candidate_summary.json
-
-ease2026 analyze --output-root /data/ease/runs --backbone qwen \
-  --seed 20260618 --second-seed 20260619 --mode generation \
-  --data-dir /data/ease/vqa --output /data/ease/runs/qwen_generation_diagnostics
-
-python scripts/plot_results.py --results-dir results --output plots
-```
+| Analysis | Result files |
+|---|---|
+| Dataset | [dataset_statistics.csv](results/dataset_statistics.csv) |
+| Backbone metrics | [qwen_three_seed.csv](results/qwen_three_seed.csv), [qwen_primary_seed.csv](results/qwen_primary_seed.csv), [glm_single_seed.csv](results/glm_single_seed.csv) |
+| Loss alignment and question families | [alignment_gap.csv](results/alignment_gap.csv), [question_family_accuracy.csv](results/question_family_accuracy.csv) |
+| Prediction and evidence diagnostics | [prediction_behavior.csv](results/prediction_behavior.csv), [dominant_class_diagnostics.csv](results/dominant_class_diagnostics.csv), [trace_support_diagnostics.csv](results/trace_support_diagnostics.csv), [trace_regression_diagnostics.csv](results/trace_regression_diagnostics.csv) |
+| Cases | [case_diagnostics.csv](results/case_diagnostics.csv), [qualitative_cases.csv](results/qualitative_cases.csv) |
 
 ## Citation
 
-If EASE supports your research, please cite the accepted **ACML 2026** paper. Proceedings volume, pages, and DOI can be added when available.
+Accepted to **ACML 2026**. Proceedings details can be added when available.
 
 ```bibtex
 @inproceedings{zheng2026ease,
@@ -235,13 +154,9 @@ If EASE supports your research, please cite the accepted **ACML 2026** paper. Pr
 }
 ```
 
-Machine-readable metadata: [CITATION.cff](CITATION.cff).
-
-## Authors
+## Authors and acknowledgments
 
 - **Haoze Zheng** — School of Computer Science and Technology, Xinjiang University; `zhenghaoze@stu.xju.edu.cn`
 - **Yaping Han** — School of Geography and Remote Sensing Science, Xinjiang University; `20231203205@stu.xju.edu.cn`
 
-## Acknowledgments
-
-We thank the **FloodNet** creators for aerial imagery and segmentation annotations, the **Qwen** and **GLM** teams for their open models, and the developers of PyTorch, Transformers, PEFT, and the Python research ecosystem. Follow the dataset and model licenses when obtaining their assets. For code reuse terms, contact the authors.
+We thank the FloodNet creators, Qwen and GLM teams, and the developers of PyTorch, Transformers, PEFT, and the Python research ecosystem. Follow the dataset/model licenses; contact the authors for code reuse terms.
