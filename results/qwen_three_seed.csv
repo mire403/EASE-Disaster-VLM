@@ -1,6 +1,0 @@
-method,num_seeds,evaluation_count,accuracy_mean_pct,accuracy_std_pct,macro_f1_mean_pct,macro_f1_std_pct,reported_ece_mean_pct,reported_ece_std_pct
-Zero-shot,1,480,70.42,,51.09,,29.58,
-PC-Ans,3,480,69.1,0.43,32.28,0.62,31.17,0.43
-PC-Trace,3,480,70.14,0.32,32.48,0.71,29.87,0.31
-AA-Ans,3,480,93.54,0.63,69.9,4.22,6.46,0.63
-AA-Trace,3,480,92.85,0.43,67.17,1.72,7.12,0.36

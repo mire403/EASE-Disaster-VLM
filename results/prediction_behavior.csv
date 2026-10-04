@@ -1,4 +1,0 @@
-method,family_top_prediction_share_min_pct,family_top_prediction_share_max_pct,normalized_prediction_entropy
-Zero-shot,52.5,61.25,0.74
-PC-Ans,72.5,83.75,0.43
-PC-Trace,71.25,80,0.47

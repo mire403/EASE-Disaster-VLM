@@ -1,8 +1,0 @@
-method,mode,evaluation_count,accuracy_pct,macro_f1_pct,reported_ece_pct
-Zero-shot,generation,480,70.42,51.09,29.58
-PC-Ans,generation,480,68.75,32.2,31.25
-PC-Trace,generation,480,70.21,32.31,29.79
-AA-Ans,generation,480,94.17,74.22,5.83
-AA-Trace,generation,480,92.71,66.51,7.29
-AA-Ans,candidate,480,92.92,67.54,13.37
-AA-Trace,candidate,480,92.29,66.07,9.02
