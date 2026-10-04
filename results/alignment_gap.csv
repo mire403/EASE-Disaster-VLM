@@ -1,0 +1,6 @@
+backbone,run_index,aa_minus_pc_accuracy_pp,reported_std_pp
+Qwen3.5-9B,1,23.96,
+Qwen3.5-9B,2,23.44,
+Qwen3.5-9B,3,23.33,
+Qwen3.5-9B,mean,23.58,0.34
+GLM-4.6V-Flash,1,21.56,

@@ -1,0 +1,7 @@
+statistic,count,paper_reference
+image_mask_pairs,2343,Section 3.1
+evaluation_questions,480,Section 3.2
+question_families,6,Table 2
+evaluation_questions_per_family,80,Table 2
+train_test_image_id_overlap,0,Section 3.2
+train_test_duplicate_mask_hashes,0,Section 3.2
