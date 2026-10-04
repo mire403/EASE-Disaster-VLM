@@ -1,0 +1,6 @@
+method,evaluation_count,accuracy_pct,macro_f1_pct,reported_ece_pct
+Zero-shot,480,68.54,49.63,30.36
+PC-Ans,480,67.71,34.08,31.14
+PC-Trace,480,69.17,35.11,29.71
+AA-Ans,480,90.21,67.58,7.82
+AA-Trace,480,89.79,68.02,7.55
