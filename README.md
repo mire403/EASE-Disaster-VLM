@@ -43,7 +43,7 @@ The study separates two supervision axes: **loss support**, either prompt-condit
 
 Trace evidence and candidate support form the assistant-side training target. PC includes these evidence tokens in the loss; AA masks them and supervises only the final answer tokens. Evaluation prompts contain the image, question, and answer choices. The two target variants in the target builder are `task_only` and `multi_trace_soft_answer`.
 
-![Figure 1: EASE overview and supervision design](figure/Figure1.png)
+![Figure 1: EASE overview and supervision design](figure/figure1.png)
 
 *Figure 1. EASE overview and the 2 × 2 supervision space.*
 
@@ -101,7 +101,7 @@ The benchmark uses **FloodNet-Supervised v1.0**. The paper reports **2,343 image
 | Dominant class | Class with the greatest pixel coverage |
 | Logical conjunction | Presence and adjacency conditions |
 
-![Figure 2: FloodNet-derived dataset construction](figure/Figure2.png)
+![Figure 2: FloodNet-derived dataset construction](figure/figure2.png)
 
 *Figure 2. Image–mask evidence is converted into questions with constrained answer spaces.*
 
@@ -174,7 +174,7 @@ The [results directory](results/README.md) contains machine-readable **paper-rep
 
 The paired AA-versus-PC gaps are **23.96, 23.44, and 23.33 percentage points**, averaging **23.58 ± 0.34**. The direct-versus-trace difference is smaller and seed-sensitive. CSV: [qwen_three_seed.csv](results/qwen_three_seed.csv).
 
-![Figure 3: Primary-seed accuracy, macro-F1, and ECE](figure/Figure3.png)
+![Figure 3: Primary-seed accuracy, macro-F1, and ECE](figure/figure3.png)
 
 *Figure 3. Primary-seed metric profile. The table above summarizes three seeds; the figure shows the primary run.*
 
@@ -194,7 +194,7 @@ The average AA accuracy exceeds the average PC accuracy by **21.56 percentage po
 
 **Reasoning families and prediction behavior.** On the primary Qwen run, AA-Ans improves spatial adjacency from **31.25% to 98.75%**, logical conjunction from **60.00% to 96.25%**, and area comparison from **67.50% to 93.75%**. PC predictions are more concentrated: normalized entropy falls from **0.74** for zero-shot to **0.43** for PC-Ans and **0.47** for PC-Trace.
 
-![Figure 4: Accuracy by reasoning family](figure/Figure4.png)
+![Figure 4: Accuracy by reasoning family](figure/figure4.png)
 
 *Figure 4. Primary-seed accuracy across six reasoning families.*
 
@@ -202,7 +202,7 @@ Dominant-class questions remain difficult when the two largest semantic regions 
 
 **Trace support and case diagnostics.** Trace top-1 answers agree with verified labels on all **480** training examples; the reported median gold-label support is **0.92**. AA-Ans fixes **123** zero-shot errors. AA-Trace helps **9** AA-Ans cases and hurts **16**; **19** cases remain hard, and the two primary AA-Ans seeds disagree on **30** examples. These are separate diagnostics, rather than a partition of the evaluation set.
 
-![Figure 5: Case-level diagnostics](figure/Figure5.png)
+![Figure 5: Case-level diagnostics](figure/figure5.png)
 
 *Figure 5. Primary-run prediction changes and seed disagreements.*
 
